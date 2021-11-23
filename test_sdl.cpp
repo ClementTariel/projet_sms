@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     SDL_Renderer *renderer = NULL;
     SDL_Texture *texture = NULL;
     int statut = EXIT_FAILURE;
-    SDL_Rect rect = {100, 100, 100, 100}, dst = {0, 0, 0, 0};
+    SDL_Rect rect = {44, 138, 170, 140}, dst = {0, 0, 0, 0};
     
     SDL_Surface *tmp = NULL;
 
@@ -34,13 +34,18 @@ int main(int argc, char *argv[])
     SDL_SetRenderTarget(renderer, NULL); /* Le renderer est la cible de rendu. */
 
 
+
     tmp = SDL_LoadBMP("1110i-v2.bmp");//260*615pixel
     if(NULL == tmp)
     {
         fprintf(stderr, "Erreur SDL_LoadBMP : %s\n", SDL_GetError());
         goto Quit;
     }
+
+
     texture = SDL_CreateTextureFromSurface(renderer, tmp);
+
+
     SDL_FreeSurface(tmp); //On libère la surface, on n’en a plus besoin 
     if(NULL == texture)
     {
@@ -48,10 +53,20 @@ int main(int argc, char *argv[])
         goto Quit;
     }
 
+    
+
     /* On récupère les dimensions de la texture, on la copie sur le renderer
        et on met à jour l’écran. */
     SDL_QueryTexture(texture, NULL, NULL, &dst.w, &dst.h);
     SDL_RenderCopy(renderer, texture, NULL, &dst);
+    
+    //nokia screen
+    SDL_SetRenderDrawColor(renderer, 165, 160, 40, 255);
+    SDL_RenderFillRect(renderer, &rect); 
+    //SDL_SetRenderDrawColor(renderer, 165, 160, 40, 255);
+    //SDL_RenderFillRect(renderer, &rect);
+
+
     SDL_RenderPresent(renderer);
     statut = EXIT_SUCCESS;
 

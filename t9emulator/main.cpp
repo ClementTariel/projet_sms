@@ -28,11 +28,17 @@ int main(int argc, char *argv[])
     gridLayout->addWidget(label, 0, 0);
     widget->setLayout(gridLayout);
 
+
+
+    QPushButton *button1 = new QPushButton(widget);
+    button1->setText("1");
+    button1->move(40, 445);
+    button1->setFixedSize(70,45);
+
+
     widget->show();
 
 
-    QPushButton bouton("l'emulateur de t9 n'est pas encore disponible voici un bouton a la place");
-    bouton.show();
 
     return app.exec();
 }

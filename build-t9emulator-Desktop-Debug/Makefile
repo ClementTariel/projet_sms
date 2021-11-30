@@ -779,7 +779,11 @@ main.o: ../t9emulator/main.cpp ../../../../anaconda3/include/qt/QtWidgets/QAppli
 		../../../../anaconda3/include/qt/QtWidgets/QPushButton \
 		../../../../anaconda3/include/qt/QtWidgets/qpushbutton.h \
 		../../../../anaconda3/include/qt/QtWidgets/qabstractbutton.h \
-		../../../../anaconda3/include/qt/QtGui/qicon.h
+		../../../../anaconda3/include/qt/QtGui/qicon.h \
+		../../../../anaconda3/include/qt/QtWidgets/QLabel \
+		../../../../anaconda3/include/qt/QtWidgets/qlabel.h \
+		../../../../anaconda3/include/qt/QtWidgets/qframe.h \
+		../../../../anaconda3/include/qt/QtGui/QPixmap
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../t9emulator/main.cpp
 
 ####### Install

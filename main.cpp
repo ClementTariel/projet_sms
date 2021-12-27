@@ -127,7 +127,7 @@ int main()
                         num_current_buffer ++;
                         current_buffer_pos = -1;
                     }
-                    while (num_max_buffer < num_current_buffer){
+                    while (num_max_buffer < num_current_buffer || (current_buffer_pos == NUM_CHAR_PER_LINE-1 && num_max_buffer == num_current_buffer)){
                         num_max_buffer ++;
                         //
                         //add a line of text on the nokia screen
@@ -191,11 +191,15 @@ int main()
         window.draw(nokia_screen);
 
         //window.draw(text);
-        if (num_current_buffer >= NB_LINES_ON_SCREEN){
-            for (int k=0;k<NB_LINES_ON_SCREEN;k++){
+        if (!(num_current_buffer < NB_LINES_ON_SCREEN-1)){
+            int local_num_lines_to_print = NB_LINES_ON_SCREEN;
+            if (current_buffer_pos >= NUM_CHAR_PER_LINE-1){
+                local_num_lines_to_print --;
+            }
+            for (int k=0;k<local_num_lines_to_print;k++){
                 
-                linesTexts[k+num_current_buffer+1-NB_LINES_ON_SCREEN].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
-                window.draw(linesTexts[k+num_current_buffer+1-NB_LINES_ON_SCREEN]);
+                linesTexts[k+num_current_buffer+1-local_num_lines_to_print].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
+                window.draw(linesTexts[k+num_current_buffer+1-local_num_lines_to_print]);
             }
         }else{
             for (int k=0;k<num_current_buffer+1;k++){
@@ -207,15 +211,23 @@ int main()
         }
 
         if ((int)floor(2*elapsed.asSeconds())%2 == 0){
-            int cursor_x_pos = current_buffer_pos;
-            if (cursor_x_pos < 0 || cursor_x_pos >= NUM_CHAR_PER_LINE){
+            int cursor_x_pos = current_buffer_pos +1;
+            int cursor_y_pos = num_current_buffer;
+            
+            if (cursor_x_pos >= NUM_CHAR_PER_LINE){
+                cursor_x_pos = 0;
+                cursor_y_pos ++;
+            }
+            if (cursor_x_pos < 0 ){
                 cursor_x_pos = 0;
             }
-            int cursor_y_pos = num_current_buffer;
             if (cursor_y_pos < 0){
                 cursor_y_pos = 0;
             }
-            if (num_current_buffer >= NB_LINES_ON_SCREEN){
+            
+            
+            
+            if (!(num_current_buffer < NB_LINES_ON_SCREEN-1)){
                 blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NUM_CHAR_PER_LINE),phone_h*0.24 + (NB_LINES_ON_SCREEN-1)*charSize);
             }else{
                 blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NUM_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);

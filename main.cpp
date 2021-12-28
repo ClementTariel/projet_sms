@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 
-#define NUM_CHAR_PER_LINE 16
+#define NB_CHAR_PER_LINE 16
 #define NB_LINES_ON_SCREEN 10
 
 int main()
@@ -60,7 +60,8 @@ int main()
 
 
 
-    std::vector<std::vector<char>> linesBuffers;
+    std::vector<char> full_text;
+
     std::vector<sf::Text> linesTexts;
 
     int charSize = phone_w/20;
@@ -72,10 +73,10 @@ int main()
         return -1;
     }
 
-    int current_buffer_pos = NUM_CHAR_PER_LINE;
-    int num_current_buffer = -1;
-    int num_max_buffer = -1;
-
+    int current_line_pos = NB_CHAR_PER_LINE;
+    int num_current_line = -1;
+    int num_max_line = -1;
+    int num_current_line_on_screen = -1;
 
 
     
@@ -117,18 +118,26 @@ int main()
                 {
                     keyString = (char)event.text.unicode;
                     if ((keyString-'0' >= 0 && keyString-'0' <= 9) || keyString == (char)13){
-                        current_buffer_pos ++;
+                        current_line_pos ++;
                     }
-                    if (!(current_buffer_pos < NUM_CHAR_PER_LINE)){
-                        num_current_buffer ++;
-                        current_buffer_pos = 0;
+                    if (!(current_line_pos < NB_CHAR_PER_LINE)){
+                        num_current_line ++;
+                        num_current_line_on_screen ++;
+                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                        }
+                        current_line_pos = 0;
                     }
                     if (keyString == (char)13){
-                        num_current_buffer ++;
-                        current_buffer_pos = -1;
+                        num_current_line ++;
+                        num_current_line_on_screen ++;
+                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                        }
+                        current_line_pos = -1;
                     }
-                    while (num_max_buffer < num_current_buffer || (current_buffer_pos == NUM_CHAR_PER_LINE-1 && num_max_buffer == num_current_buffer)){
-                        num_max_buffer ++;
+                    while (num_max_line < num_current_line || (current_line_pos == NB_CHAR_PER_LINE-1 && num_max_line == num_current_line)){
+                        num_max_line ++;
                         //
                         //add a line of text on the nokia screen
                         //
@@ -149,30 +158,75 @@ int main()
                         text.setPosition(phone_w*0.19,phone_h*0.24);
                         // store the new line of text
                         linesTexts.push_back(text);
-                        // the string is store in an another variable 
+                        
+                        // the string is stored in an another variable 
                         // to make it easier to change it
-                        std::vector<char> buf(NUM_CHAR_PER_LINE);
-                        linesBuffers.push_back(buf);
-                        for (int l=0;l<NUM_CHAR_PER_LINE;l++){
-                            linesBuffers[num_max_buffer][l] = ' ';
+                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
+                            full_text.push_back(' ');
                         }
                     }
 
 
                     if (keyString-'0' >= 0 && keyString-'0' <= 9){
-                        linesBuffers[num_current_buffer][current_buffer_pos] = keyString;
-                        char buf [NUM_CHAR_PER_LINE];
-                        for (int l=0;l<NUM_CHAR_PER_LINE;l++){
-                            buf[l] = linesBuffers[num_current_buffer][l];
+                        full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = keyString;
+                        char buf [NB_CHAR_PER_LINE];
+                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
+                            buf[l] = full_text[num_current_line*NB_CHAR_PER_LINE+l];
                         }
-                        linesTexts[num_current_buffer].setString(buf);
+                        linesTexts[num_current_line].setString(buf);
                     }
                     //printf("char : \n%c,\n%d\n",keyString,keyString);
                 }
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-                {
-                    // left key is pressed
-                    
+                
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
+                // left key is pressed
+                if (num_current_line > -1){
+                    if (current_line_pos > 0){
+                        current_line_pos --;
+                    }else if(current_line_pos == 0 && num_current_line>0){
+                        current_line_pos = NB_CHAR_PER_LINE - 1;
+                        num_current_line --;
+                        num_current_line_on_screen --;
+                        if (num_current_line_on_screen < 0){
+                            num_current_line_on_screen = 0;
+                        }
+                    }
+                }
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)){
+                // right key is pressed
+                if (num_current_line > -1){
+                    if (current_line_pos < NB_CHAR_PER_LINE - 1){
+                        current_line_pos ++;
+                    }else if(current_line_pos == NB_CHAR_PER_LINE - 1 && num_current_line < num_max_line){
+                        current_line_pos = 0;
+                        num_current_line ++;
+                        num_current_line_on_screen ++;
+                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                        }
+                    }
+                } 
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)){
+                // up key is pressed
+                if (num_current_line > 0){
+                    num_current_line --;
+                    num_current_line_on_screen --;
+                    if (num_current_line_on_screen < 0){
+                        num_current_line_on_screen = 0;
+                    }
+                }
+            }
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)){
+                // down key is pressed
+                if (num_current_line < num_max_line){
+                    num_current_line ++;
+                    num_current_line_on_screen ++;
+                    if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                        num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                    }
                 }
             }
         }
@@ -189,20 +243,20 @@ int main()
         window.draw(phone_sprite);
 
         window.draw(nokia_screen);
-
+        
         //window.draw(text);
-        if (!(num_current_buffer < NB_LINES_ON_SCREEN-1)){
+        if (!(num_max_line < NB_LINES_ON_SCREEN-1)){
             int local_num_lines_to_print = NB_LINES_ON_SCREEN;
-            if (current_buffer_pos >= NUM_CHAR_PER_LINE-1){
+            if (current_line_pos >= NB_CHAR_PER_LINE-1 && num_current_line_on_screen == NB_LINES_ON_SCREEN-1){
                 local_num_lines_to_print --;
             }
             for (int k=0;k<local_num_lines_to_print;k++){
                 
-                linesTexts[k+num_current_buffer+1-local_num_lines_to_print].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
-                window.draw(linesTexts[k+num_current_buffer+1-local_num_lines_to_print]);
+                linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN- num_current_line_on_screen].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
+                window.draw(linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN-num_current_line_on_screen]);
             }
         }else{
-            for (int k=0;k<num_current_buffer+1;k++){
+            for (int k=0;k<num_max_line+1;k++){
                 
                 linesTexts[k].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
                 
@@ -211,10 +265,10 @@ int main()
         }
 
         if ((int)floor(2*elapsed.asSeconds())%2 == 0){
-            int cursor_x_pos = current_buffer_pos +1;
-            int cursor_y_pos = num_current_buffer;
+            int cursor_x_pos = current_line_pos +1;
+            int cursor_y_pos = num_current_line_on_screen;
             
-            if (cursor_x_pos >= NUM_CHAR_PER_LINE){
+            if (cursor_x_pos >= NB_CHAR_PER_LINE){
                 cursor_x_pos = 0;
                 cursor_y_pos ++;
             }
@@ -224,17 +278,23 @@ int main()
             if (cursor_y_pos < 0){
                 cursor_y_pos = 0;
             }
-            
-            
-            
-            if (!(num_current_buffer < NB_LINES_ON_SCREEN-1)){
-                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NUM_CHAR_PER_LINE),phone_h*0.24 + (NB_LINES_ON_SCREEN-1)*charSize);
-            }else{
-                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NUM_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);
+            if (cursor_y_pos >= NB_LINES_ON_SCREEN){
+                cursor_y_pos = NB_LINES_ON_SCREEN-1;
             }
+
+            //printf("%d,%d,%d,%d,%d\n",cursor_y_pos,num_current_line_on_screen,num_current_line,num_max_line,NB_LINES_ON_SCREEN);
+      
+            
+            blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);
+            /*
+            if (!(num_current_line < NB_LINES_ON_SCREEN-1)){
+                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + (NB_LINES_ON_SCREEN-1)*charSize);
+            }else{
+                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);
+            }*/
             window.draw(blinkText);
         }
-        
+
 
         window.display();
 

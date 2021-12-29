@@ -73,12 +73,6 @@ int main()
         return -1;
     }
 
-    int current_line_pos = NB_CHAR_PER_LINE;
-    int num_current_line = -1;
-    int num_max_line = -1;
-    int num_current_line_on_screen = -1;
-
-
     
 
     char keyString;
@@ -103,6 +97,38 @@ int main()
     
 
 
+    sf::Text text;
+    // select the font
+    text.setFont(nokiafont);
+    // define text
+    text.setString("");
+    // set the character size
+    text.setCharacterSize(charSize); // in pixels, not points!
+    // set the color
+    //Text.setFillColor(sf::Color(0, 0, 0));//black
+    text.setFillColor(sf::Color::Black);
+    // set the text style
+    //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
+    text.setStyle(sf::Text::Regular);
+    // set position
+    text.setPosition(phone_w*0.19,phone_h*0.24);
+    // store the new line of text
+    linesTexts.push_back(text);
+
+    // the string is stored in an another variable 
+    // to make it easier to change it
+    for (int l=0;l<NB_CHAR_PER_LINE;l++){
+        full_text.push_back(' ');
+    }
+
+    int current_line_pos = 0;
+    int num_current_line = 0;
+    int num_max_line = 0;
+    int num_current_line_on_screen = 0;
+
+
+
+
     while (window.isOpen())
     {
         //window.setSize(sf::Vector2u(window.getSize().x ,window.getSize().x));
@@ -114,29 +140,91 @@ int main()
                 window.close();
             }
             else if ( event.type == sf::Event::TextEntered ){
-                if ( event.text.unicode < 0x80 ) // it's printable
-                {
+                if ( event.text.unicode < 0x80 ) {// it's printable
                     keyString = (char)event.text.unicode;
-                    if ((keyString-'0' >= 0 && keyString-'0' <= 9) || keyString == (char)13){
+                    
+                    if ((keyString-'0' >= 0 && keyString-'0' <= 9)||keyString=='#'||keyString=='*'){
+                        while (!(num_current_line*NB_CHAR_PER_LINE+current_line_pos<full_text.size())){
+                            full_text.push_back(' ');
+                        }
+                        full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = keyString;
+                        char buf [NB_CHAR_PER_LINE];
+                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
+                            if (num_current_line*NB_CHAR_PER_LINE+l<full_text.size()){
+                                buf[l] = full_text[num_current_line*NB_CHAR_PER_LINE+l];
+                            }else{
+                                buf[l] = ' ';   
+                            }                            
+                        }
+                        linesTexts[num_current_line].setString(buf);
+                    }
+                    //printf("char : \n%c,\n%d\n",keyString,keyString);
+                    if (keyString == 'C'){
+                        if (num_current_line+current_line_pos>0){//on est pas en 0,0
+                            //full_text.push_back(' ');
+                            //full_text.erase(full_text.begin() + NB_CHAR_PER_LINE*num_current_line+current_line_pos);
+                            for (int k=(num_current_line*NB_CHAR_PER_LINE)+current_line_pos;k<full_text.size();k++){
+                                full_text[k-1] = full_text[k];
+                            }
+                            //full_text[full_text.size()-1] = ' ';
+                            if (num_max_line>0){
+                                full_text.pop_back();
+                                if (full_text.size()%NB_CHAR_PER_LINE == 0){
+                                    num_max_line --;
+                                    linesTexts.pop_back();
+                                }
+                            }
+                            
+                            
+                            if (current_line_pos > 0){
+                                current_line_pos --;
+                            }else if(current_line_pos == 0 && num_current_line>0){
+                                current_line_pos = NB_CHAR_PER_LINE - 1;
+                                num_current_line --;
+                                num_current_line_on_screen --;
+                                if (num_current_line_on_screen < 0){
+                                    num_current_line_on_screen = 0;
+                                }
+                            }
+                            char buf[NB_CHAR_PER_LINE];
+                            for (int k=0;k<linesTexts.size()-1;k++){
+                                for (int l=0;l<NB_CHAR_PER_LINE;l++){
+                                    buf[l] = full_text[k*NB_CHAR_PER_LINE+l];
+                                }
+                                linesTexts[k].setString(buf);
+                            }
+                            for (int l=0;l<NB_CHAR_PER_LINE;l++){
+                                if ((linesTexts.size()-1)*NB_CHAR_PER_LINE+l<full_text.size()){
+                                    buf[l] = full_text[(linesTexts.size()-1)*NB_CHAR_PER_LINE+l];
+                                }else{
+                                    buf[l] = ' ';
+                                }
+                            }
+                            linesTexts[linesTexts.size()-1].setString(buf);
+                            
+                        }
+                        
+                    }
+                    if ((keyString-'0' >= 0 && keyString-'0' <= 9)||keyString=='#'||keyString=='*'/*|| keyString == (char)13*/){
                         current_line_pos ++;
+                        if (!(current_line_pos < NB_CHAR_PER_LINE)){
+                            num_current_line ++;
+                            num_current_line_on_screen ++;
+                            if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                                num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                            }
+                            current_line_pos = 0;
+                        }/*
+                        if (keyString == (char)13){
+                            num_current_line ++;
+                            num_current_line_on_screen ++;
+                            if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                                num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                            }
+                            current_line_pos = 0;
+                        }*/
                     }
-                    if (!(current_line_pos < NB_CHAR_PER_LINE)){
-                        num_current_line ++;
-                        num_current_line_on_screen ++;
-                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
-                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
-                        }
-                        current_line_pos = 0;
-                    }
-                    if (keyString == (char)13){
-                        num_current_line ++;
-                        num_current_line_on_screen ++;
-                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
-                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
-                        }
-                        current_line_pos = -1;
-                    }
-                    while (num_max_line < num_current_line || (current_line_pos == NB_CHAR_PER_LINE-1 && num_max_line == num_current_line)){
+                    while (num_max_line < num_current_line /*|| (current_line_pos == NB_CHAR_PER_LINE-1 && num_max_line == num_current_line)/**/){
                         num_max_line ++;
                         //
                         //add a line of text on the nokia screen
@@ -165,47 +253,32 @@ int main()
                             full_text.push_back(' ');
                         }
                     }
-
-
-                    if (keyString-'0' >= 0 && keyString-'0' <= 9){
-                        full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = keyString;
-                        char buf [NB_CHAR_PER_LINE];
-                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
-                            buf[l] = full_text[num_current_line*NB_CHAR_PER_LINE+l];
-                        }
-                        linesTexts[num_current_line].setString(buf);
-                    }
-                    //printf("char : \n%c,\n%d\n",keyString,keyString);
                 }
                 
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
                 // left key is pressed
-                if (num_current_line > -1){
-                    if (current_line_pos > 0){
-                        current_line_pos --;
-                    }else if(current_line_pos == 0 && num_current_line>0){
-                        current_line_pos = NB_CHAR_PER_LINE - 1;
-                        num_current_line --;
-                        num_current_line_on_screen --;
-                        if (num_current_line_on_screen < 0){
-                            num_current_line_on_screen = 0;
-                        }
+                if (current_line_pos > 0){
+                    current_line_pos --;
+                }else if(current_line_pos <= 0 && num_current_line>0){
+                    current_line_pos = NB_CHAR_PER_LINE - 1;
+                    num_current_line --;
+                    num_current_line_on_screen --;
+                    if (num_current_line_on_screen < 0){
+                        num_current_line_on_screen = 0;
                     }
                 }
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)){
                 // right key is pressed
-                if (num_current_line > -1){
-                    if (current_line_pos < NB_CHAR_PER_LINE - 1){
-                        current_line_pos ++;
-                    }else if(current_line_pos == NB_CHAR_PER_LINE - 1 && num_current_line < num_max_line){
-                        current_line_pos = 0;
-                        num_current_line ++;
-                        num_current_line_on_screen ++;
-                        if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
-                            num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
-                        }
+                if (current_line_pos < NB_CHAR_PER_LINE - 1){
+                    current_line_pos ++;
+                }else if(current_line_pos == NB_CHAR_PER_LINE - 1 && num_current_line < num_max_line){
+                    current_line_pos = 0;
+                    num_current_line ++;
+                    num_current_line_on_screen ++;
+                    if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                        num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
                     }
                 } 
             }
@@ -246,7 +319,7 @@ int main()
         
         //window.draw(text);
         if (!(num_max_line < NB_LINES_ON_SCREEN-1)){
-            int local_num_lines_to_print = NB_LINES_ON_SCREEN;
+            /*int local_num_lines_to_print = NB_LINES_ON_SCREEN;
             if (current_line_pos >= NB_CHAR_PER_LINE-1 && num_current_line_on_screen == NB_LINES_ON_SCREEN-1){
                 local_num_lines_to_print --;
             }
@@ -254,6 +327,10 @@ int main()
                 
                 linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN- num_current_line_on_screen].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
                 window.draw(linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN-num_current_line_on_screen]);
+            }*/
+            for (int k=0;k<NB_LINES_ON_SCREEN;k++){
+                linesTexts[k+num_current_line-num_current_line_on_screen].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
+                window.draw(linesTexts[k+num_current_line-num_current_line_on_screen]);
             }
         }else{
             for (int k=0;k<num_max_line+1;k++){
@@ -265,9 +342,8 @@ int main()
         }
 
         if ((int)floor(2*elapsed.asSeconds())%2 == 0){
-            int cursor_x_pos = current_line_pos +1;
+            int cursor_x_pos = current_line_pos;
             int cursor_y_pos = num_current_line_on_screen;
-            
             if (cursor_x_pos >= NB_CHAR_PER_LINE){
                 cursor_x_pos = 0;
                 cursor_y_pos ++;

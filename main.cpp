@@ -3,11 +3,59 @@
 #include <cmath>
 #include <cstdlib>
 
-#define NB_CHAR_PER_LINE 16
+//#define NB_CHAR_PER_LINE 16
+// ratio et taille des charactere determine arbitrairement
+// pour que ca soit lisible et joli (ou du moins pas trop moche)
+#define NB_CHAR_PER_LINE 13
+#define NB_CHAR_MAX_PER_WORD 64
 #define NB_LINES_ON_SCREEN 10
+#define NB_MAX_GUESS_PRINTED 3
+
+
+std::vector<std::vector<char>> autocompletion(std::vector<char> word){
+    std::vector<std::vector<char>> result  = std::vector<std::vector<char>>();
+    //
+    //inserer ici autocompletion
+    //
+
+    //
+    //test pour voir si l'affichage marche
+    //
+    for (int k=0; k<(int)word[0]-(int)'0';k++){
+        std::vector<char> guess_k = std::vector<char>();
+
+        for (int l=0; l<word.size() && l<NB_CHAR_MAX_PER_WORD;l++){
+            guess_k.push_back('0'+(word[l]-'0'+k+1)%10);
+        }
+        result.push_back(guess_k);
+    }
+
+    return result;
+}
+
+//cest hardcode cest moche mais rapide a implementer
+char letter_to_num(char l){
+    if (l-'0' >= 0 &&l-'0'<=9){
+        return l;
+    }if (l == 's'){
+        return '7';
+    }if (l == 'v'){
+        return '8';
+    }if ((int)l > (int)'v'){
+        return '9';
+    }
+    return (char)('2'+((l-'a')/3));
+}
+
+
 
 int main()
 {
+    
+    //
+    // environ 150 lignes dinitialisations diverses et variees, notament pour la gestion de l'affichage
+    //
+
     //clock to mesure time
     sf::Clock clock; // starts the clock
 
@@ -47,25 +95,25 @@ int main()
 
     
 
-    // define a 120x50 rectangle
-    sf::RectangleShape nokia_screen(sf::Vector2f(100.f, 50.f));
+    // define a rectangle
+    sf::RectangleShape nokia_screen(sf::Vector2f(0,0));
     // change the size
-    //nokia_screen.setSize(sf::Vector2f(phone_w*0.68,phone_h*0.235));
-    nokia_screen.setSize(sf::Vector2f(phone_w*0.64,phone_h*0.19));
+    nokia_screen.setSize(sf::Vector2f(phone_w*0.64, phone_h*0.19));
     // set color
     sf::Color screen_color(162, 160, 39);
     nokia_screen.setFillColor(screen_color);
     // set position
-    //nokia_screen.setPosition(phone_w*0.158,phone_h*0.22);
     nokia_screen.setPosition(phone_w*0.1775,phone_h*0.245);
 
+
+    double screen_ref_width = nokia_screen.getGlobalBounds().width;
 
 
     std::vector<char> full_text;
 
-    std::vector<char> current_word;
+    std::vector<char> current_word = std::vector<char>();
 
-    std::vector<sf::Text> linesTexts;
+    int pos_in_current_word=-1;//valeur de -1 : indicateur qu'il faut la recalculer
 
     int charSize = phone_w/20;
 
@@ -85,94 +133,73 @@ int main()
     // select the font
     blinkText.setFont(nokiafont);
     // define text
+    //blinkText.setString("|");
     blinkText.setString("_");
     // set the character size
     blinkText.setCharacterSize(charSize); // in pixels, not points!
     // set the color
-    //Text.setFillColor(sf::Color(0, 0, 0));//black
     blinkText.setFillColor(sf::Color::Black);
     // set the text style
-    //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
     blinkText.setStyle(sf::Text::Regular);
     // set position
     blinkText.setPosition(phone_w*0.19,phone_h*0.24);
 
 
-    sf::Text best_guess_text;
-    // select the font
-    best_guess_text.setFont(nokiafont);
-    // define text
-    best_guess_text.setString("Proof");
-    // set the character size
-    best_guess_text.setCharacterSize(charSize); // in pixels, not points!
-    // set the color
-    best_guess_text.setFillColor(screen_color);
-    // set the text style
-    //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
-    best_guess_text.setStyle(sf::Text::Regular);
-    // set position
-    best_guess_text.setPosition(phone_w*0.19,phone_h*0.24);
-
-    sf::Text guess_list_text;
-    // select the font
-    guess_list_text.setFont(nokiafont);
-    // define text
-    guess_list_text.setString("of\nconcept");
-    // set the character size
-    guess_list_text.setCharacterSize(charSize); // in pixels, not points!
-    // set the color
-    guess_list_text.setFillColor(sf::Color::Black);
-    // set the text style
-    //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
-    guess_list_text.setStyle(sf::Text::Regular);
-    // set position
-    guess_list_text.setPosition(phone_w*0.19,phone_h*0.24);
-
     sf::RectangleShape best_gess_background(sf::Vector2f(0, 0));;
     best_gess_background.setFillColor(sf::Color::Black);
-    
 
 
-    sf::Text text;
-    // select the font
-    text.setFont(nokiafont);
-    // define text
-    text.setString("");
-    // set the character size
-    text.setCharacterSize(charSize); // in pixels, not points!
-    // set the color
-    //Text.setFillColor(sf::Color(0, 0, 0));//black
-    text.setFillColor(sf::Color::Black);
-    // set the text style
-    //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
-    text.setStyle(sf::Text::Regular);
-    // set position
-    text.setPosition(phone_w*0.19,phone_h*0.24);
-    // store the new line of text
-    linesTexts.push_back(text);
+    std::vector<sf::Text> char_on_screen;
 
-    // the string is stored in an another variable 
-    // to make it easier to change it
-    for (int l=0;l<NB_CHAR_PER_LINE;l++){
-        full_text.push_back(' ');
+    for (int i=0;i<NB_LINES_ON_SCREEN;i++){
+        for (int j=0;j<NB_CHAR_PER_LINE;j++){
+            //un char aux coordonnees i,j
+            sf::Text text;
+            // select the font
+            text.setFont(nokiafont);
+            // define text
+            text.setString(" ");
+            // set the character size
+            text.setCharacterSize(charSize); // in pixels, not points!
+            // set the color
+            //Text.setFillColor(sf::Color(0, 0, 0));//black
+            text.setFillColor(sf::Color::Black);
+            // set the text style
+            //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
+            text.setStyle(sf::Text::Regular);
+            // set position
+            text.setPosition(phone_w*0.19 + j*charSize,phone_h*0.24 + i*charSize);
+            // store the new line of text
+
+            char_on_screen.push_back(text);
+        }
     }
+
+
+    full_text = std::vector<char>();
 
     int current_line_pos = 0;
     int num_current_line = 0;
     int num_max_line = 0;
     int num_current_line_on_screen = 0;
     int line_offset;
+
+    bool currently_guessing_a_word = false;
     int nb_guess_printed = 0;
+    int total_nb_guess = 0;
+    int current_guess_num = 0;
     int nb_lines_printed = 0;
+    std::vector<std::vector<char>> guess_list;
 
     bool key_is_new_char;
 
-
+    //
+    //  boucle principale
+    //
 
     while (window.isOpen())
     {
-        //window.setSize(sf::Vector2u(window.getSize().x ,window.getSize().x));
-
+        //window.setSize(sf::Vector2u(X ,Y));
 
         sf::Event event;
         while (window.pollEvent(event)){
@@ -183,98 +210,115 @@ int main()
                 if ( event.text.unicode < 0x80 ) {// it's printable
                     keyString = (char)event.text.unicode;
                     key_is_new_char = false;
+                    //
+                    //  disjonction de cas pour etre sur que lentree clavier correspond a ce qui est autorise
+                    //
                     if ((keyString-'0' >= 0 && keyString-'0' <= 9)||keyString=='#'||keyString=='*'){
                         key_is_new_char = true;
-                        if (keyString == '0'){
-                            nb_guess_printed = 0; // fin d'un mot
-                            if (current_word.size() == 1){
-                                switch(current_word[0]){
-                                    case ' ':
-                                        keyString = '.';
-                                        break;
-                                    case '.':
-                                        keyString = '.';
-                                        break;
-                                    default:
-                                        keyString = ' ';
-                                        break;
-                                }
-                            }else{
-                                keyString = ' ';
-                            }
+                        //
+                        //  recalcul de la position du curseur dans le mot en train d etre devine
+                        //  et reevaluation de tout le mot concerne si besoin
+                        //
+                        if (pos_in_current_word<0){
                             current_word.clear();
-                        }else{
-                            if (current_word.size() == 1){
-                                switch(current_word[0]){
-                                    case ' ':
-                                        current_word.clear();
-                                        break;
-                                    case '.':
-                                        current_word.clear();
-                                        break;
-                                    default:
-                                        break;
+                            pos_in_current_word = 0;
+                            int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
+                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
+                                pos_in_full_text--;
+                                pos_in_current_word++;
+                            }
+                            int s = full_text.size();
+                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && full_text[pos_in_full_text] != '.'){
+                                current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
+                                pos_in_full_text++;
+                            }
+                        }
+
+                        //le zero est special il permet soit de faire unespace soit de valider un mot puis de mettre un espace     
+                        if (keyString == '0'){
+                            if (currently_guessing_a_word){
+                                //trouver le debut du mot
+                                int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
+                                while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
+                                    pos_in_full_text--;
+                                    current_line_pos--;
+                                }
+                                //remplacer le mot lettre par lettre
+                                int pos_in_autocompleted_word = 0;
+                                int s = full_text.size();
+                                while(pos_in_full_text+pos_in_autocompleted_word < s && full_text[pos_in_full_text+pos_in_autocompleted_word] != ' ' && full_text[pos_in_full_text+pos_in_autocompleted_word] != '.'){
+                                    //current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
+                                    full_text[pos_in_full_text+pos_in_autocompleted_word] = guess_list[current_guess_num][pos_in_autocompleted_word];
+                                    pos_in_autocompleted_word++;
+                                }
+                                //cas ou le mot devine est plus long que le nombre de char reellement entre par lutilisateur
+                                std::vector<char>::iterator it;
+                                it = full_text.begin();
+                                while (pos_in_autocompleted_word < guess_list[current_guess_num].size()){
+                                    full_text.insert(it+pos_in_full_text+pos_in_autocompleted_word,guess_list[current_guess_num][pos_in_autocompleted_word]);
+                                    pos_in_autocompleted_word++;
+                                }
+
+                                //ajouter l espace final
+                                keyString = ' ';
+
+                                //decaler le curseur a la fin du mot
+                                current_line_pos += pos_in_autocompleted_word;
+                                while (!(current_line_pos<NB_CHAR_PER_LINE)){
+                                    current_line_pos-=NB_CHAR_PER_LINE;
+                                    num_current_line++;
+                                    num_current_line_on_screen ++;
+                                    if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
+                                        num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                                    }
+                                    if (num_current_line == num_max_line && current_line_pos > full_text.size()%NB_CHAR_PER_LINE){
+                                        current_line_pos = full_text.size()%NB_CHAR_PER_LINE;
+                                    }
+                                }
+                            }else{
+                                int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
+                                if (pos_in_full_text>0 && (full_text[pos_in_full_text-1] == ' ' || full_text[pos_in_full_text-1] == '.')){
+                                    keyString = '.';
+                                }else{
+                                    keyString = ' ';
                                 }
                             }
-                            //prediction etc
-                            //===============================
-                            //
-                            //  proposer une liste de
-                            //  suggestion plausibles
-                            //
-                            //===============================
+                            currently_guessing_a_word = false;
+                            current_word.clear();
+                            pos_in_current_word = -1;
+                        }
 
-                            //appeller ici la fonction qui prend word en argument
-                            //et qui renvoie une liste de suggestions
-                            nb_guess_printed = 3;//valeur arbritraire en attendant
-                            
-                        }
-                        current_word.push_back(keyString);
-                        while (!(num_current_line*NB_CHAR_PER_LINE+current_line_pos<full_text.size())){
-                            full_text.push_back(' ');
-                        }
-                        if (num_current_line*NB_CHAR_PER_LINE+current_line_pos > 0){
-                            switch(current_word[0]){
-                                case '.':
-                                    full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = keyString;
-                                    full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = ' ';
-                                    break;
-                                default:
-                                    full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = keyString;
-                                    break;
+                        if (keyString == '.'){
+                            if (num_current_line*NB_CHAR_PER_LINE+current_line_pos > 0){
+                                full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = keyString;
                             }
-                            
-                        }else{
-                            full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos] = keyString;
+                            //on met un espace apres une ponctuation
+                            keyString = ' ';
                         }
-                        char buf [NB_CHAR_PER_LINE];
-                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
-                            if (num_current_line*NB_CHAR_PER_LINE+l<full_text.size()){
-                                buf[l] = full_text[num_current_line*NB_CHAR_PER_LINE+l];
-                            }else{
-                                buf[l] = ' ';   
-                            }                            
-                        }
-                        linesTexts[num_current_line].setString(buf);
+                        std::vector<char>::iterator it;
+                        it = full_text.begin();
+                        full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
+                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
+                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,anothervector.begin(),anothervector.end());
+                        
+
                     }
-                    //printf("char : \n%c,\n%d\n",keyString,keyString);
                     if (keyString == 'C'){
+
+                        currently_guessing_a_word = false;
+
                         if (num_current_line+current_line_pos>0){//on est pas en 0,0
-                            //full_text.push_back(' ');
-                            //full_text.erase(full_text.begin() + NB_CHAR_PER_LINE*num_current_line+current_line_pos);
                             for (int k=(num_current_line*NB_CHAR_PER_LINE)+current_line_pos;k<full_text.size();k++){
                                 full_text[k-1] = full_text[k];
                             }
-                            //full_text[full_text.size()-1] = ' ';
-                            if (num_max_line>0){
-                                full_text.pop_back();
-                                if (full_text.size()%NB_CHAR_PER_LINE == 0){
-                                    num_max_line --;
-                                    linesTexts.pop_back();
-                                }
+                            full_text.pop_back();
+                            if (num_max_line>0 && full_text.size()%NB_CHAR_PER_LINE == 0){
+                                num_max_line --;
                             }
-                            
-                            
+
+                            //
+                            //  recalcul de la position du curseur
+                            // 
                             if (current_line_pos > 0){
                                 current_line_pos --;
                             }else if(current_line_pos == 0 && num_current_line>0){
@@ -285,26 +329,31 @@ int main()
                                     num_current_line_on_screen = 0;
                                 }
                             }
-                            char buf[NB_CHAR_PER_LINE];
-                            for (int k=0;k<linesTexts.size()-1;k++){
-                                for (int l=0;l<NB_CHAR_PER_LINE;l++){
-                                    buf[l] = full_text[k*NB_CHAR_PER_LINE+l];
-                                }
-                                linesTexts[k].setString(buf);
+
+                            //
+                            //  recalcul de la position du curseur dans le mot en train d etre devine
+                            //  et reevaluation de tout le mot concerne
+                            //
+                            current_word.clear();
+                            pos_in_current_word = 0;
+                            int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
+                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
+                                pos_in_full_text--;
+                                pos_in_current_word++;
                             }
-                            for (int l=0;l<NB_CHAR_PER_LINE;l++){
-                                if ((linesTexts.size()-1)*NB_CHAR_PER_LINE+l<full_text.size()){
-                                    buf[l] = full_text[(linesTexts.size()-1)*NB_CHAR_PER_LINE+l];
-                                }else{
-                                    buf[l] = ' ';
-                                }
-                            }
-                            linesTexts[linesTexts.size()-1].setString(buf);
-                            
+                            int s = full_text.size();
+                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && full_text[pos_in_full_text] != '.'){
+                                current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
+                                pos_in_full_text++;
+                            }  
                         }
                         
                     }
                     if (key_is_new_char){
+                        
+                        //
+                        //  mettre a jour la position du curseur
+                        //
                         current_line_pos ++;
                         if (!(current_line_pos < NB_CHAR_PER_LINE)){
                             num_current_line ++;
@@ -314,54 +363,50 @@ int main()
                             }
                             current_line_pos = 0;
                         }
-                                               
-                        /*
-                        if (keyString == (char)13){
-                            num_current_line ++;
-                            num_current_line_on_screen ++;
-                            if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
-                                num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
+                        //
+                        //  mettre a jour le mot en cours decriture
+                        //
+                        if (keyString != ' '){
+                            std::vector<char>::iterator it;
+                            it = current_word.begin();
+                            current_word.insert(it+pos_in_current_word,keyString);
+                            pos_in_current_word++;
+                        }
+
+                        if (current_word.size()>0){
+                            currently_guessing_a_word = true;
+                            guess_list = autocompletion(current_word);
+                            total_nb_guess = guess_list.size();
+                            if (total_nb_guess<=NB_MAX_GUESS_PRINTED){
+                                nb_guess_printed = total_nb_guess;
+                            }else{
+                                nb_guess_printed = NB_MAX_GUESS_PRINTED;
                             }
-                            current_line_pos = 0;
-                        }*/
+                            current_guess_num = 0;
+                        }else{
+                            currently_guessing_a_word = false;
+                        }
                     }
                     
-                    while (num_max_line < num_current_line /*|| (current_line_pos == NB_CHAR_PER_LINE-1 && num_max_line == num_current_line)/**/){
+                    while ((num_max_line+1)*NB_CHAR_PER_LINE < full_text.size() || num_max_line < num_current_line /*|| (current_line_pos == NB_CHAR_PER_LINE-1 && num_max_line == num_current_line)/**/){
                         num_max_line ++;
-                        //
-                        //add a line of text on the nokia screen
-                        //
-                        sf::Text text;
-                        // select the font
-                        text.setFont(nokiafont);
-                        // define text
-                        text.setString("");
-                        // set the character size
-                        text.setCharacterSize(charSize); // in pixels, not points!
-                        // set the color
-                        //Text.setFillColor(sf::Color(0, 0, 0));//black
-                        text.setFillColor(sf::Color::Black);
-                        // set the text style
-                        //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
-                        text.setStyle(sf::Text::Regular);
-                        // set position
-                        text.setPosition(phone_w*0.19,phone_h*0.24);
-                        // store the new line of text
-                        linesTexts.push_back(text);
-                        
-                        // the string is stored in an another variable 
-                        // to make it easier to change it
-                        for (int l=0;l<NB_CHAR_PER_LINE;l++){
-                            full_text.push_back(' ');
-                        }
                     }
                 }
                 
             }
+            //
+            //  disjonction de cas selon les fleches directionnelles
+            //  droite et gauche permettent de se deplacer
+            //
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
                 // left key is pressed
 
-                nb_guess_printed = 0; //coder la cmpletion autoamtique
+                nb_guess_printed = 0;
+                currently_guessing_a_word = false;
+                total_nb_guess = 0;
+                current_guess_num = 0;
+                pos_in_current_word = -1;
+                current_word.clear();
 
                 if (current_line_pos > 0){
                     current_line_pos --;
@@ -377,9 +422,14 @@ int main()
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)){
                 // right key is pressed
                 
-                nb_guess_printed = 0; //coder la cmpletion autoamtique
+                nb_guess_printed = 0;
+                currently_guessing_a_word = false;
+                total_nb_guess = 0;
+                current_guess_num = 0;
+                pos_in_current_word = -1;
+                current_word.clear();
 
-                if (current_line_pos < NB_CHAR_PER_LINE - 1){
+                if (current_line_pos < NB_CHAR_PER_LINE - 1 && NB_CHAR_PER_LINE*num_current_line+current_line_pos<full_text.size()){
                     current_line_pos ++;
                 }else if(current_line_pos == NB_CHAR_PER_LINE - 1 && num_current_line < num_max_line){
                     current_line_pos = 0;
@@ -390,12 +440,20 @@ int main()
                     }
                 } 
             }
+            //
+            //  haut et bas permettent de choisir parmi les propositions de mot
+            //  ou alors se deplacer si aucun mot n'est en train d etre propose
+            //
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)){
                 // up key is pressed
+                if (currently_guessing_a_word && total_nb_guess>0){
+                    current_guess_num = (current_guess_num-1+total_nb_guess)%total_nb_guess;
+                }
+                else if (num_current_line > 0){
 
-                nb_guess_printed = 0; //coder la cmpletion autoamtique
+                    pos_in_current_word = -1;
+                    current_word.clear();
 
-                if (num_current_line > 0){
                     num_current_line --;
                     num_current_line_on_screen --;
                     if (num_current_line_on_screen < 0){
@@ -405,22 +463,32 @@ int main()
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)){
                 // down key is pressed
+                if (currently_guessing_a_word && total_nb_guess>0){
+                    current_guess_num = (current_guess_num+1)%total_nb_guess;
+                }
+                else if (num_current_line < num_max_line){
 
-                nb_guess_printed = 0; //coder la cmpletion autoamtique
+                    pos_in_current_word = -1;
+                    current_word.clear();
 
-                if (num_current_line < num_max_line){
                     num_current_line ++;
                     num_current_line_on_screen ++;
                     if (num_current_line_on_screen >= NB_LINES_ON_SCREEN){
                         num_current_line_on_screen = NB_LINES_ON_SCREEN - 1;
                     }
+                    if (num_current_line == num_max_line && current_line_pos > full_text.size()%NB_CHAR_PER_LINE){
+                        current_line_pos = full_text.size()%NB_CHAR_PER_LINE;
+                    }
                 }
             }
         }
         
+        
         sf::Time elapsed = clock.getElapsedTime();
         
-
+        //
+        //  affichage des elements de linterface graphique
+        //
 
         window.clear();
 
@@ -431,6 +499,9 @@ int main()
 
         window.draw(nokia_screen);
 
+        //
+        //  affichage des elements de texte
+        //
         
         if (num_max_line < NB_LINES_ON_SCREEN-1){
             nb_lines_printed = num_max_line+1;
@@ -438,7 +509,7 @@ int main()
             nb_lines_printed = NB_LINES_ON_SCREEN;
         }
 
-        if (nb_guess_printed > 0){
+        if (currently_guessing_a_word && nb_guess_printed > 0){
             if (num_current_line_on_screen + nb_guess_printed < NB_LINES_ON_SCREEN){
                 line_offset = num_current_line_on_screen;
             }else{
@@ -448,53 +519,88 @@ int main()
                 nb_lines_printed --;
             }
 
-            best_gess_background.setPosition(phone_w*0.19-1,phone_h*0.24 + nb_lines_printed*charSize);
-            best_gess_background.setSize(sf::Vector2f(best_guess_text.getLocalBounds().width+2,charSize+2));
-            window.draw(best_gess_background);
+
+            for (int k=0;k<nb_guess_printed;k++){
+                sf::Text guess_k_text;
+                // select the font
+                guess_k_text.setFont(nokiafont);
+                // define text
+                char buf[NB_CHAR_MAX_PER_WORD+3];
+                int pos_last_char = 0;
+                for (int l=0;l<NB_CHAR_PER_LINE+1;l++){
+                    if(l<guess_list[(k+current_guess_num)%total_nb_guess].size()){
+                        buf[l] = guess_list[(k+current_guess_num)%total_nb_guess][l];
+                        pos_last_char = l;
+                    }else{
+                        buf[l] = 0;
+                    }
+                }
+                
+                //s'asurer que ca ne depasse pas de l'ecran
+                //taille non fiable car depend de la fonte et de chaque char
+                /*guess_k_text.setString(buf);
+                if (guess_k_text.getGlobalBounds().width*charSize > 24*screen_ref_width){
+                    while (pos_last_char > 0 && guess_k_text.getGlobalBounds().width*charSize > 25*screen_ref_width){
+                        buf[pos_last_char] = '.';
+                        buf[pos_last_char+1] = '.';
+                        buf[pos_last_char+2] = '.';
+                        buf[pos_last_char+3] = 0;
+                        pos_last_char --;
+                        guess_k_text.setString(buf);
+                    }
+                }*/
+                if (pos_last_char>=NB_CHAR_PER_LINE){
+                    buf[NB_CHAR_PER_LINE+1] = '.';
+                    buf[NB_CHAR_PER_LINE+2] = '.';
+                    buf[NB_CHAR_PER_LINE+3] = '.';
+                    buf[NB_CHAR_PER_LINE+4] = 0;
+                }
+
+                guess_k_text.setString(buf);
+
+                // set the character size
+                guess_k_text.setCharacterSize(charSize); // in pixels, not points!
+                // set the color
+                if (k==0){
+                    guess_k_text.setFillColor(screen_color);
+                }else{
+                    guess_k_text.setFillColor(sf::Color::Black);
+                }
+                // set the text style
+                guess_k_text.setStyle(sf::Text::Regular);
+                // set position
+                guess_k_text.setPosition(phone_w*0.19,phone_h*0.24 + (nb_lines_printed+k)*charSize);
+                if (k==0){
+                    best_gess_background.setPosition(phone_w*0.19-1,phone_h*0.24 + nb_lines_printed*charSize);
+                    best_gess_background.setSize(sf::Vector2f(guess_k_text.getLocalBounds().width+2,charSize+2));
+                    window.draw(best_gess_background);
+                }
+                window.draw(guess_k_text);
+                
+            }
             
-            best_guess_text.setPosition(phone_w*0.19,phone_h*0.24 + nb_lines_printed*charSize);
-            window.draw(best_guess_text);
-            
-            guess_list_text.setPosition(phone_w*0.19,phone_h*0.24 + (nb_lines_printed+1)*charSize);
-            window.draw(guess_list_text);
         }else{
             line_offset = num_current_line_on_screen;
         }
 
         for (int k=0;k<nb_lines_printed;k++){
-            linesTexts[k+num_current_line-line_offset].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
             
-            window.draw(linesTexts[k+num_current_line-line_offset]);
+            for (int j=0;j<NB_CHAR_PER_LINE;j++){
+                int char_pos = (k+num_current_line-line_offset)*NB_CHAR_PER_LINE+j;
+                if (char_pos < full_text.size()){
+                    char_on_screen[k*NB_CHAR_PER_LINE+j].setString(full_text[char_pos]);
+                    window.draw(char_on_screen[k*NB_CHAR_PER_LINE+j]);
+                }
+                
+            }
             
         }
 
-        //window.draw(text);
-        /*if (!(num_max_line < NB_LINES_ON_SCREEN-1)){
-            /*int local_num_lines_to_print = NB_LINES_ON_SCREEN;
-            if (current_line_pos >= NB_CHAR_PER_LINE-1 && num_current_line_on_screen == NB_LINES_ON_SCREEN-1){
-                local_num_lines_to_print --;
-            }
-            for (int k=0;k<local_num_lines_to_print;k++){
-                
-                linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN- num_current_line_on_screen].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
-                window.draw(linesTexts[k+num_current_line-local_num_lines_to_print+NB_LINES_ON_SCREEN-num_current_line_on_screen]);
-            }*//*
+        
 
-            for (int k=0;k<NB_LINES_ON_SCREEN;k++){
-                linesTexts[k+num_current_line-line_offset].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
-                
-                window.draw(linesTexts[k+num_current_line-line_offset]);
-                
-            }
-        }else{
-            for (int k=0;k<num_max_line+1;k++){
-                
-                linesTexts[k].setPosition(phone_w*0.19,phone_h*0.24 + k*charSize);
-                
-                window.draw(linesTexts[k]);
-                
-            }
-        }*/
+        //
+        // affichage curseur ( + effet clignotant)
+        //
 
         if ((int)floor(2*elapsed.asSeconds())%2 == 0){
             int cursor_x_pos = current_line_pos;
@@ -513,16 +619,10 @@ int main()
                 cursor_y_pos = NB_LINES_ON_SCREEN-1;
             }
 
-            //printf("%d,%d,%d,%d,%d\n",cursor_y_pos,num_current_line_on_screen,num_current_line,num_max_line,NB_LINES_ON_SCREEN);
-      
+            
             
             blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);
-            /*
-            if (!(num_current_line < NB_LINES_ON_SCREEN-1)){
-                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + (NB_LINES_ON_SCREEN-1)*charSize);
-            }else{
-                blinkText.setPosition(phone_w*0.19 + cursor_x_pos*(nokia_screen_w/NB_CHAR_PER_LINE),phone_h*0.24 + cursor_y_pos*charSize);
-            }*/
+            
             window.draw(blinkText);
         }
 

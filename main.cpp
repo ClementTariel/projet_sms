@@ -6,10 +6,16 @@
 //#define NB_CHAR_PER_LINE 16
 // ratio et taille des charactere determine arbitrairement
 // pour que ca soit lisible et joli (ou du moins pas trop moche)
-#define NB_CHAR_PER_LINE 13
+#define NB_CHAR_PER_LINE 12
 #define NB_CHAR_MAX_PER_WORD 64
 #define NB_LINES_ON_SCREEN 10
 #define NB_MAX_GUESS_PRINTED 3
+
+//
+//  l'idée est de decouper l'ecran en grille
+//  chaque case correspond a un char
+//  ainsi c'est + facile de se deplacer dans le texte
+//
 
 
 std::vector<std::vector<char>> autocompletion(std::vector<char> word){
@@ -21,11 +27,15 @@ std::vector<std::vector<char>> autocompletion(std::vector<char> word){
     //
     //test pour voir si l'affichage marche
     //
-    for (int k=0; k<(int)word[0]-(int)'0';k++){
+    for (int k=0; k<3;k++){
         std::vector<char> guess_k = std::vector<char>();
 
         for (int l=0; l<word.size() && l<NB_CHAR_MAX_PER_WORD;l++){
-            guess_k.push_back('0'+(word[l]-'0'+k+1)%10);
+            if (word[l]<'8'){
+                guess_k.push_back('a'+3*(word[l]-'2')+k);
+            }else{
+                guess_k.push_back('t'+3*(word[l]-'8')+k);
+            }
         }
         result.push_back(guess_k);
     }
@@ -33,8 +43,27 @@ std::vector<std::vector<char>> autocompletion(std::vector<char> word){
     return result;
 }
 
+bool isPunctuation(char c){
+    return c == '.' || c == '!' || c == '?';
+}
+
+char nextPunctuation(char c){
+    switch(c){
+        case '.':
+            return '!';
+        case '!':
+            return '?';
+        default:
+            return '.';
+    }
+}
+
+
 //cest hardcode cest moche mais rapide a implementer
 char letter_to_num(char l){
+    if (isPunctuation(l)){
+        return '1';
+    }
     if (l-'0' >= 0 &&l-'0'<=9){
         return l;
     }if (l == 's'){
@@ -46,6 +75,7 @@ char letter_to_num(char l){
     }
     return (char)('2'+((l-'a')/3));
 }
+
 
 
 
@@ -168,7 +198,7 @@ int main()
             //text.setStyle(sf::String::Bold | sf::String::Italic | sf::String::Underlined);
             text.setStyle(sf::Text::Regular);
             // set position
-            text.setPosition(phone_w*0.19 + j*charSize,phone_h*0.24 + i*charSize);
+            text.setPosition(phone_w*0.19 + j*charSize +j+1,phone_h*0.24 + i*charSize);
             // store the new line of text
 
             char_on_screen.push_back(text);
@@ -193,6 +223,10 @@ int main()
 
     bool key_is_new_char;
 
+    int pos_in_autocompleted_word = 0;
+
+    bool change_word_selected = false;
+
     //
     //  boucle principale
     //
@@ -213,57 +247,94 @@ int main()
                     //
                     //  disjonction de cas pour etre sur que lentree clavier correspond a ce qui est autorise
                     //
-                    if ((keyString-'0' >= 0 && keyString-'0' <= 9)||keyString=='#'||keyString=='*'){
-                        key_is_new_char = true;
-                        //
-                        //  recalcul de la position du curseur dans le mot en train d etre devine
-                        //  et reevaluation de tout le mot concerne si besoin
-                        //
-                        if (pos_in_current_word<0){
-                            current_word.clear();
-                            pos_in_current_word = 0;
-                            int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
-                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
-                                pos_in_full_text--;
-                                pos_in_current_word++;
-                            }
-                            int s = full_text.size();
-                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && full_text[pos_in_full_text] != '.'){
-                                current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
-                                pos_in_full_text++;
-                            }
+                    if (keyString=='*'){
+                        if (currently_guessing_a_word){
+                            current_guess_num = (current_guess_num+1)%total_nb_guess;
+                            change_word_selected = true;
                         }
-
-                        //le zero est special il permet soit de faire unespace soit de valider un mot puis de mettre un espace     
-                        if (keyString == '0'){
-                            if (currently_guessing_a_word){
-                                //trouver le debut du mot
+                    }else if (keyString-'0' >= 0 && keyString-'0' <= 9){
+                        key_is_new_char = true;      
+                        if (keyString == '1'){
+                            if(current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                                full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] = nextPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1]);
+                                key_is_new_char = false;
+                            }
+                            keyString = '.';
+                            currently_guessing_a_word = false;
+                        }else if (keyString != '0'){
+                            if (!currently_guessing_a_word){
+                                currently_guessing_a_word = true;
+                                current_guess_num = 0;
+                                //
+                                //  recalcul de la position du curseur dans le mot en train d etre devine
+                                //  et reevaluation de tout le mot concerne si besoin
+                                //
+                                current_word.clear();
+                                pos_in_current_word = 0;
                                 int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
-                                while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
+                                while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && !isPunctuation(full_text[pos_in_full_text-1])){
                                     pos_in_full_text--;
+                                    pos_in_current_word++;
+                                }
+                                int s = full_text.size();
+                                while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && !isPunctuation(full_text[pos_in_full_text])){
+                                    current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
+                                    pos_in_full_text++;
+                                }
+                            }
+                        //le zero est special il permet soit de faire unespace soit de valider un mot puis de mettre un espace     
+                        }else{
+                            if (currently_guessing_a_word){
+                                //
+                                //  remplacer dans le texte les lettres du mot en train d'etre devine
+                                //  par le meilleur choix du moment 
+                                //
+
+                                //trouver le debut du mot
+                                while(current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
                                     current_line_pos--;
                                 }
                                 //remplacer le mot lettre par lettre
-                                int pos_in_autocompleted_word = 0;
+
+                                //verifier si la 1ere lettre est en Maj
+                                bool isCapital = false;
+                                pos_in_autocompleted_word = 0;
+                                while(pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
+                                    pos_in_autocompleted_word--;
+                                }
+                                if (pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE == 0 || isPunctuation(full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                                    isCapital = true;
+                                }
+
+                                pos_in_autocompleted_word = 0;
                                 int s = full_text.size();
-                                while(pos_in_full_text+pos_in_autocompleted_word < s && full_text[pos_in_full_text+pos_in_autocompleted_word] != ' ' && full_text[pos_in_full_text+pos_in_autocompleted_word] != '.'){
-                                    //current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
-                                    full_text[pos_in_full_text+pos_in_autocompleted_word] = guess_list[current_guess_num][pos_in_autocompleted_word];
+                                while(current_line_pos+num_current_line*NB_CHAR_PER_LINE < s && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE])){
+                                    if (pos_in_autocompleted_word < NB_CHAR_MAX_PER_WORD){
+                                        if (isCapital){
+                                            isCapital = false;
+                                            full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = toupper(guess_list[current_guess_num][pos_in_autocompleted_word]);
+                                        }else{
+                                            full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = guess_list[current_guess_num][pos_in_autocompleted_word];
+                                        }
+                                        
+                                    }else{
+                                        full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = ' ';
+                                    }
                                     pos_in_autocompleted_word++;
+                                    current_line_pos++;
                                 }
                                 //cas ou le mot devine est plus long que le nombre de char reellement entre par lutilisateur
                                 std::vector<char>::iterator it;
                                 it = full_text.begin();
                                 while (pos_in_autocompleted_word < guess_list[current_guess_num].size()){
-                                    full_text.insert(it+pos_in_full_text+pos_in_autocompleted_word,guess_list[current_guess_num][pos_in_autocompleted_word]);
+                                    full_text.insert(it+current_line_pos+num_current_line*NB_CHAR_PER_LINE,guess_list[current_guess_num][pos_in_autocompleted_word]);
                                     pos_in_autocompleted_word++;
+                                    current_line_pos++;
                                 }
 
                                 //ajouter l espace final
                                 keyString = ' ';
 
-                                //decaler le curseur a la fin du mot
-                                current_line_pos += pos_in_autocompleted_word;
                                 while (!(current_line_pos<NB_CHAR_PER_LINE)){
                                     current_line_pos-=NB_CHAR_PER_LINE;
                                     num_current_line++;
@@ -276,34 +347,22 @@ int main()
                                     }
                                 }
                             }else{
-                                int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
-                                if (pos_in_full_text>0 && (full_text[pos_in_full_text-1] == ' ' || full_text[pos_in_full_text-1] == '.')){
-                                    keyString = '.';
-                                }else{
-                                    keyString = ' ';
-                                }
+                                keyString = ' ';
                             }
                             currently_guessing_a_word = false;
                             current_word.clear();
                             pos_in_current_word = -1;
                         }
 
-                        if (keyString == '.'){
-                            if (num_current_line*NB_CHAR_PER_LINE+current_line_pos > 0){
-                                full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = keyString;
+                        if (keyString == ' '){
+                            if (current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
+                                full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = '.';
                             }
-                            //on met un espace apres une ponctuation
-                            keyString = ' ';
+                            
                         }
-                        std::vector<char>::iterator it;
-                        it = full_text.begin();
-                        full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
-                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
-                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,anothervector.begin(),anothervector.end());
-                        
 
                     }
-                    if (keyString == 'C'){
+                    if (keyString == 'C'||keyString=='#'){
 
                         currently_guessing_a_word = false;
 
@@ -337,12 +396,12 @@ int main()
                             current_word.clear();
                             pos_in_current_word = 0;
                             int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
-                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && full_text[pos_in_full_text-1] != '.'){
+                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && !isPunctuation(full_text[pos_in_full_text-1])){
                                 pos_in_full_text--;
                                 pos_in_current_word++;
                             }
                             int s = full_text.size();
-                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && full_text[pos_in_full_text] != '.'){
+                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && !isPunctuation(full_text[pos_in_full_text])){
                                 current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
                                 pos_in_full_text++;
                             }  
@@ -350,6 +409,14 @@ int main()
                         
                     }
                     if (key_is_new_char){
+                        //
+                        //  inserer le nouveau char
+                        //
+                        std::vector<char>::iterator it;
+                        it = full_text.begin();
+                        full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
+                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
+                        //full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,anothervector.begin(),anothervector.end());
                         
                         //
                         //  mettre a jour la position du curseur
@@ -366,15 +433,12 @@ int main()
                         //
                         //  mettre a jour le mot en cours decriture
                         //
-                        if (keyString != ' '){
+                        if (keyString != ' ' && !isPunctuation(keyString)){
                             std::vector<char>::iterator it;
                             it = current_word.begin();
                             current_word.insert(it+pos_in_current_word,keyString);
-                            pos_in_current_word++;
-                        }
+                            pos_in_current_word = current_word.size();
 
-                        if (current_word.size()>0){
-                            currently_guessing_a_word = true;
                             guess_list = autocompletion(current_word);
                             total_nb_guess = guess_list.size();
                             if (total_nb_guess<=NB_MAX_GUESS_PRINTED){
@@ -382,9 +446,45 @@ int main()
                             }else{
                                 nb_guess_printed = NB_MAX_GUESS_PRINTED;
                             }
-                            current_guess_num = 0;
-                        }else{
-                            currently_guessing_a_word = false;
+                            //
+                            //  remplacer dans le texte les lettres du mot en train d'etre devine
+                            //  par le meilleur choix du moment 
+                            //
+                            
+                            //trouver le debut du mot
+                            while(current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                                current_line_pos--;
+                            }
+                            //remplacer le mot lettre par lettre
+
+                            //verifier si la 1ere lettre est en Maj
+                            bool isCapital = false;
+                            pos_in_autocompleted_word = 0;
+                            while(pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
+                                pos_in_autocompleted_word--;
+                            }
+                            if (pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE == 0 || isPunctuation(full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                                isCapital = true;
+                            }
+
+                            pos_in_autocompleted_word = 0;
+                            int s = full_text.size();
+                            while(current_line_pos+num_current_line*NB_CHAR_PER_LINE< s && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE])){
+                                if (pos_in_autocompleted_word < NB_CHAR_MAX_PER_WORD){
+                                    if (isCapital){
+                                        isCapital = false;
+                                        full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = toupper(guess_list[current_guess_num][pos_in_autocompleted_word]);
+                                    }else{
+                                        full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = guess_list[current_guess_num][pos_in_autocompleted_word];
+                                    }    
+                                }else{
+                                    full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = ' ';
+                                }
+                                pos_in_autocompleted_word++;
+                                current_line_pos++;
+                            }
+
+
                         }
                     }
                     
@@ -448,6 +548,7 @@ int main()
                 // up key is pressed
                 if (currently_guessing_a_word && total_nb_guess>0){
                     current_guess_num = (current_guess_num-1+total_nb_guess)%total_nb_guess;
+                    change_word_selected = true;
                 }
                 else if (num_current_line > 0){
 
@@ -465,6 +566,7 @@ int main()
                 // down key is pressed
                 if (currently_guessing_a_word && total_nb_guess>0){
                     current_guess_num = (current_guess_num+1)%total_nb_guess;
+                    change_word_selected = true;
                 }
                 else if (num_current_line < num_max_line){
 
@@ -480,6 +582,43 @@ int main()
                         current_line_pos = full_text.size()%NB_CHAR_PER_LINE;
                     }
                 }
+            }
+
+            if (change_word_selected){
+                change_word_selected = false;
+                //trouver le debut du mot
+                while(current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                    current_line_pos--;
+                }
+                //remplacer le mot lettre par lettre
+
+                //verifier si la 1ere lettre est en Maj
+                bool isCapital = false;
+                pos_in_autocompleted_word = 0;
+                while(pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
+                    pos_in_autocompleted_word--;
+                }
+                if (pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE == 0 || isPunctuation(full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
+                    isCapital = true;
+                }
+                            
+                pos_in_autocompleted_word = 0;
+                int s = full_text.size();
+                while(current_line_pos+num_current_line*NB_CHAR_PER_LINE < s && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE])){
+                    if (pos_in_autocompleted_word < NB_CHAR_MAX_PER_WORD){
+                        if (isCapital){
+                            isCapital = false;
+                            full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = toupper(guess_list[current_guess_num][pos_in_autocompleted_word]);
+                        }else{
+                            full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = guess_list[current_guess_num][pos_in_autocompleted_word];
+                        }   
+                    }else{
+                        full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = ' ';
+                    }
+                    pos_in_autocompleted_word++;
+                    current_line_pos++;
+                }
+                        
             }
         }
         

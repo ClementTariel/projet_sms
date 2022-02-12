@@ -1,9 +1,12 @@
 #include <SFML/Graphics.hpp>
 
 #include <cmath>
-#include <cstdlib>
+#include <string>
+#include <fstream>
+#include <chrono> 
 
-//#define NB_CHAR_PER_LINE 16
+#include "trie.hpp"
+
 // ratio et taille des charactere determine arbitrairement
 // pour que ca soit lisible et joli (ou du moins pas trop moche)
 #define NB_CHAR_PER_LINE 12
@@ -18,16 +21,26 @@
 //
 
 
-std::vector<std::vector<char>> autocompletion(std::vector<char> word){
-    std::vector<std::vector<char>> result  = std::vector<std::vector<char>>();
+std::vector<std::vector<char>> autocompletion(TrieLetter* dico, std::vector<char> word){
     //
-    //inserer ici autocompletion
+    //  autocompletion
     //
+    std::vector<char> current_word = std::vector<char>();
+    std::vector<std::vector<char>> result = dico->suggestionsFromNum(dico, word.begin(), word.end(), current_word);
+    /*for (int i=0; i<result.size();i++){
+        for (int k=0; k<result[i].size();k++){
+            printf("%c",result[i][k]);
+        }
+        printf("\n");
+    }*/
 
+    if (result.size()>0){
+        return result;
+    }
     //
     //test pour voir si l'affichage marche
     //
-    for (int k=0; k<3;k++){
+    for (int k=0; k<1;k++){
         std::vector<char> guess_k = std::vector<char>();
 
         for (int l=0; l<word.size() && l<NB_CHAR_MAX_PER_WORD;l++){
@@ -39,27 +52,29 @@ std::vector<std::vector<char>> autocompletion(std::vector<char> word){
         }
         result.push_back(guess_k);
     }
-
+    
     return result;
 }
 
 bool isPunctuation(char c){
-    return c == '.' || c == '!' || c == '?';
+    return c == ',' || c == '.' || c == '!' || c == '?';
 }
 
 char nextPunctuation(char c){
     switch(c){
+        case ',':
+            return '.';
         case '.':
             return '!';
         case '!':
             return '?';
         default:
-            return '.';
+            return ',';
     }
 }
 
 
-//cest hardcode cest moche mais rapide a implementer
+//cest moche mais rapide a implementer
 char letter_to_num(char l){
     if (isPunctuation(l)){
         return '1';
@@ -76,12 +91,40 @@ char letter_to_num(char l){
     return (char)('2'+((l-'a')/3));
 }
 
+void load_data(const std::string filename, TrieLetter* dico) {
+    std::ifstream infile;
+    std::string new_word;
+    std::string freq;
+    infile.open(filename, std::ifstream::in);
+    if (infile.is_open()) {
+        int nb_words = 0;
+        std::chrono::time_point<std::chrono::system_clock> start, end;
+        start = std::chrono::system_clock::now();
+        while (infile.good()) {
+            getline(infile, new_word, ',');
+            getline(infile, freq, '\n');
+            dico->insert(new_word, std::stoi(freq));
+            nb_words++;
+        }
+        end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        infile.close();
+        printf("%d words loaded in %fs\n",nb_words,elapsed_seconds.count());
+    }
+    else { 
+        printf("dictionnary file not found !");
+    }
+
+}
 
 
 
 int main()
 {
     
+    TrieLetter dico = TrieLetter();
+    load_data("data.txt", &dico);
+
     //
     // environ 150 lignes dinitialisations diverses et variees, notament pour la gestion de l'affichage
     //
@@ -259,31 +302,10 @@ int main()
                                 full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] = nextPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1]);
                                 key_is_new_char = false;
                             }
-                            keyString = '.';
+                            keyString = ',';
                             currently_guessing_a_word = false;
-                        }else if (keyString != '0'){
-                            if (!currently_guessing_a_word){
-                                currently_guessing_a_word = true;
-                                current_guess_num = 0;
-                                //
-                                //  recalcul de la position du curseur dans le mot en train d etre devine
-                                //  et reevaluation de tout le mot concerne si besoin
-                                //
-                                current_word.clear();
-                                pos_in_current_word = 0;
-                                int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
-                                while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && !isPunctuation(full_text[pos_in_full_text-1])){
-                                    pos_in_full_text--;
-                                    pos_in_current_word++;
-                                }
-                                int s = full_text.size();
-                                while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && !isPunctuation(full_text[pos_in_full_text])){
-                                    current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
-                                    pos_in_full_text++;
-                                }
-                            }
-                        //le zero est special il permet soit de faire unespace soit de valider un mot puis de mettre un espace     
-                        }else{
+                        }else if (keyString == '0'){
+                        //le zero est special il permet soit de faire unespace soit de valider un mot puis de mettre un espace
                             if (currently_guessing_a_word){
                                 //
                                 //  remplacer dans le texte les lettres du mot en train d'etre devine
@@ -354,11 +376,8 @@ int main()
                             pos_in_current_word = -1;
                         }
 
-                        if (keyString == ' '){
-                            if (current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
-                                full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = '.';
-                            }
-                            
+                        if (keyString == ' ' &&current_line_pos+num_current_line*NB_CHAR_PER_LINE>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-1] == ' '){
+                            full_text[num_current_line*NB_CHAR_PER_LINE+current_line_pos-1] = '.';     
                         }
 
                     }
@@ -402,7 +421,7 @@ int main()
                             }
                             int s = full_text.size();
                             while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && !isPunctuation(full_text[pos_in_full_text])){
-                                current_word.push_back(letter_to_num(full_text[pos_in_full_text]));
+                                current_word.push_back(letter_to_num(tolower(full_text[pos_in_full_text])));
                                 pos_in_full_text++;
                             }  
                         }
@@ -412,6 +431,27 @@ int main()
                         //
                         //  inserer le nouveau char
                         //
+                        if (keyString != ' ' && !isPunctuation(keyString) && !currently_guessing_a_word){
+                            currently_guessing_a_word = true;
+                            current_guess_num = 0;
+                            //
+                            //  recalcul de la position du curseur dans le mot en train d etre devine
+                            //  et reevaluation de tout le mot concerne si besoin
+                            //
+                            current_word.clear();
+                            pos_in_current_word = 0;
+                            int pos_in_full_text = current_line_pos+num_current_line*NB_CHAR_PER_LINE;
+                            while(pos_in_full_text>0 && full_text[pos_in_full_text-1] != ' ' && !isPunctuation(full_text[pos_in_full_text-1])){
+                                pos_in_full_text--;
+                                pos_in_current_word++;
+                            }
+                            int s = full_text.size();
+                            while(pos_in_full_text < s && full_text[pos_in_full_text] != ' ' && !isPunctuation(full_text[pos_in_full_text])){
+                                current_word.push_back(letter_to_num(tolower(full_text[pos_in_full_text])));
+                                pos_in_full_text++;
+                            }
+                        }
+
                         std::vector<char>::iterator it;
                         it = full_text.begin();
                         full_text.insert(it+num_current_line*NB_CHAR_PER_LINE+current_line_pos,keyString);
@@ -436,11 +476,18 @@ int main()
                         if (keyString != ' ' && !isPunctuation(keyString)){
                             std::vector<char>::iterator it;
                             it = current_word.begin();
+                            /*pos_in_current_word = 0;
+
+                            while(current_line_pos+num_current_line*NB_CHAR_PER_LINE-pos_in_current_word>0 && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-pos_in_current_word-1] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE-pos_in_current_word-1])){
+                                pos_in_current_word++;
+                            }*/
+
                             current_word.insert(it+pos_in_current_word,keyString);
                             pos_in_current_word = current_word.size();
 
-                            guess_list = autocompletion(current_word);
+                            guess_list = autocompletion(&dico, current_word);
                             total_nb_guess = guess_list.size();
+                            current_guess_num = 0;
                             if (total_nb_guess<=NB_MAX_GUESS_PRINTED){
                                 nb_guess_printed = total_nb_guess;
                             }else{
@@ -466,13 +513,14 @@ int main()
                             if (pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE == 0 || isPunctuation(full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
                                 isCapital = true;
                             }
-
+                            
                             pos_in_autocompleted_word = 0;
                             int s = full_text.size();
                             while(current_line_pos+num_current_line*NB_CHAR_PER_LINE< s && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE])){
                                 if (pos_in_autocompleted_word < NB_CHAR_MAX_PER_WORD){
                                     if (isCapital){
                                         isCapital = false;
+                                        char test_char = guess_list[current_guess_num][pos_in_autocompleted_word];
                                         full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = toupper(guess_list[current_guess_num][pos_in_autocompleted_word]);
                                     }else{
                                         full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] = guess_list[current_guess_num][pos_in_autocompleted_word];
@@ -483,7 +531,6 @@ int main()
                                 pos_in_autocompleted_word++;
                                 current_line_pos++;
                             }
-
 
                         }
                     }
@@ -601,7 +648,7 @@ int main()
                 if (pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE == 0 || isPunctuation(full_text[pos_in_autocompleted_word+current_line_pos+num_current_line*NB_CHAR_PER_LINE-1])){
                     isCapital = true;
                 }
-                            
+
                 pos_in_autocompleted_word = 0;
                 int s = full_text.size();
                 while(current_line_pos+num_current_line*NB_CHAR_PER_LINE < s && full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE] != ' ' && !isPunctuation(full_text[current_line_pos+num_current_line*NB_CHAR_PER_LINE])){

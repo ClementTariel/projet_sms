@@ -290,6 +290,23 @@ int main()
                     //
                     //  disjonction de cas pour etre sur que lentree clavier correspond a ce qui est autorise
                     //
+
+                    //
+                    //  Pour faciliter l'utilisation on peut utiliser le clavier
+                    //  normal et c'est converti automatiquement en chiffres
+                    //
+                    if (keyString >= 'a' && keyString <= 'z'){
+                        keyString = letter_to_num(keyString);
+                    }else if (keyString >= 'A' && keyString <= 'Z'){
+                        keyString = letter_to_num(keyString-'A'+'a');
+                    }else if (keyString == ' ' || keyString == 13){
+                        keyString = '0';
+                    }else if (isPunctuation(keyString)){
+                        keyString = '1';
+                    }else if (keyString == 8){
+                        keyString = 'C';
+                    }
+
                     if (keyString=='*'){
                         if (currently_guessing_a_word){
                             current_guess_num = (current_guess_num+1)%total_nb_guess;

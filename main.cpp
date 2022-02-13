@@ -26,14 +26,14 @@ std::vector<std::vector<char>> autocompletion(TrieLetter* dico, std::vector<char
     //  autocompletion
     //
     std::vector<char> current_word = std::vector<char>();
-    std::vector<std::vector<char>> result = dico->suggestionsFromNum(dico, word.begin(), word.end(), current_word);
-    /*for (int i=0; i<result.size();i++){
-        for (int k=0; k<result[i].size();k++){
-            printf("%c",result[i][k]);
-        }
-        printf("\n");
-    }*/
-
+    std::vector<Word> sorted_words = dico->suggestionsFromNum(dico, word.begin(), word.end(), current_word);
+    std::vector<std::vector<char>> result = std::vector<std::vector<char>>();
+    for (auto it=sorted_words.begin(); it != sorted_words.end();it++){
+        std::vector<char> new_word = it->getWord();
+        result.push_back(new_word);
+    }
+    //std::vector<std::vector<char>> result = dico->suggestionsFromNum(dico, word.begin(), word.end(), current_word);
+    
     if (result.size()>0){
         return result;
     }

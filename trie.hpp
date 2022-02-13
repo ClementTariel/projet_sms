@@ -8,6 +8,30 @@
 #define DIGITS_SIZE 8
 
 
+class Word{
+private :
+    std::vector<char> word;
+    int freq;
+public:
+    Word() {
+        word = std::vector<char>();
+        freq = 0;
+    }
+    Word(const std::vector<char> word_to_copy,int f) {
+        word = std::vector<char>();
+        for (int k = 0; k < word_to_copy.size(); k++){
+            word.push_back(word_to_copy[k]);
+        }
+        freq = f;
+    }
+    std::vector<char> getWord(){
+        return word;
+    }
+    int getFreq(){
+        return freq;
+    }
+};
+
 class TrieLetter {
 
 private:
@@ -30,7 +54,7 @@ public:
     const int search(const std::string);
     const bool haveChildren(const TrieLetter*);
     std::string num_to_char(char);
-    std::vector<std::vector<char>> suggestionsFromNum(TrieLetter*, const std::vector<char>::iterator, const std::vector<char>::iterator, std::vector<char>);
+    std::vector<Word>  suggestionsFromNum(TrieLetter*, const std::vector<char>::iterator, const std::vector<char>::iterator, std::vector<char>);
 
 };
 
@@ -89,8 +113,8 @@ const int TrieLetter::search(const std::string word) {
     return node->freq;
 }
 
-std::vector<std::vector<char>> TrieLetter::suggestionsFromNum(TrieLetter* node, const std::vector<char>::iterator char_in_word, const std::vector<char>::iterator end_of_word, std::vector<char> current_word) {
-    std::vector<std::vector<char>> suggestions = std::vector<std::vector<char>>();
+std::vector<Word> TrieLetter::suggestionsFromNum(TrieLetter* node, const std::vector<char>::iterator char_in_word, const std::vector<char>::iterator end_of_word, std::vector<char> current_word) {
+    std::vector<Word> suggestions = std::vector<Word>();
     //
     //  on verifie que la node existe
     //
@@ -98,20 +122,33 @@ std::vector<std::vector<char>> TrieLetter::suggestionsFromNum(TrieLetter* node, 
         return suggestions;
     }
     if (char_in_word < end_of_word) {
+        //on teste tous les char pouvant correspondre au numero
         for (int k=0; k<num_to_char(*char_in_word).size(); k++) {
             int char_num = num_to_char(*char_in_word).at(k)-'a';
             current_word.push_back('a'+char_num);
-            std::vector<std::vector<char>> new_suggestions = suggestionsFromNum(node->next_char[char_num],char_in_word+1,end_of_word,current_word);
+            std::vector<Word> new_suggestions = suggestionsFromNum(node->next_char[char_num],char_in_word+1,end_of_word,current_word);
             current_word.pop_back();
-            suggestions.insert(std::end(suggestions), std::begin(new_suggestions), std::end(new_suggestions));
+
+            //insertion tri
+            int insert_pos = 0;
+            for (std::vector<Word>::iterator it=new_suggestions.begin(); it != new_suggestions.end();it++){
+                auto it2 = suggestions.begin();
+                if (it2 != (std::vector<Word>::iterator)0){
+                    while(it2+insert_pos != suggestions.end() && (it2+insert_pos)->getFreq()>it->getFreq()){
+                        insert_pos++;
+                    }
+                    suggestions.insert(it2+insert_pos,*it);
+                }else{
+                    suggestions.push_back(*it);
+                    it2 = suggestions.begin();
+                    insert_pos = 0;
+                }
+                insert_pos++;
+            }
+            //suggestions.insert(std::end(suggestions), std::begin(new_suggestions), std::end(new_suggestions));
         }
     }else if (node->freq > 0){
-        std::vector<char> new_word = std::vector<char>();
-        for (int k=0; k<current_word.size(); k++) {
-            new_word.push_back(current_word[k]);
-            
-        }
-        suggestions.push_back(new_word);
+        suggestions.push_back(Word(current_word,node->freq));
     }
 
     return suggestions;
@@ -162,29 +199,6 @@ bool TrieLetter::del(TrieLetter* node, const std::vector<char>::iterator char_in
     }
 }
 
-class Word{
-private :
-    std::vector<char> word;
-    int freq;
-public:
-    Word() {
-        word = std::vector<char>();
-        freq = 0;
-    }
-    Word(const std::vector<char> word_to_copy,int f) {
-        word = std::vector<char>();
-        for (int k = 0; k < word_to_copy.size(); k++){
-            word.push_back(word_to_copy[k]);
-        }
-        freq = f;
-    }
-    std::vector<char> getWord(){
-        return word;
-    }
-    int getFreq(){
-        return freq;
-    }
-};
 
 class TrieNumber {
 

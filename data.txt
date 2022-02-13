@@ -1183,7 +1183,7 @@ fri,679
 thursday,677
 courses,677
 consumer,676
-hi,675
+hi,1675
 airport,674
 foreign,674
 artist,674
@@ -29997,11 +29997,3 @@ persisted,7
 mdi,7
 nilsson,7
 whereabouts,7
-adgj,100
-gmj,100
-adg,100
-adhadjgd,100
-bbbgd,100
-ehhbg,100
-dngdb,100
-aaebbc,100
